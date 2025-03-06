@@ -105,6 +105,26 @@
             border-color: darken(var(--primary-color), 10%);
         }
 
+        .category-tabs {
+            background-color: #f1f3f5;
+            border-bottom: 1px solid #ddd;
+            padding: 10px 15px 0;
+        }
+
+        .category-tabs .nav-link {
+            color: var(--text-color);
+            border-radius: 8px 8px 0 0;
+            padding: 8px 15px;
+            margin-right: 5px;
+            font-size: 0.9rem;
+        }
+
+        .category-tabs .nav-link.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
         /* Scrollbar Styling */
         ::-webkit-scrollbar {
             width: 8px;
@@ -133,9 +153,15 @@
                 <p>Your AI-powered legal assistant, ready to help!</p>
             </div>
 
+            <div class="category-tabs">
+                <ul class="nav nav-tabs" id="category-tabs">
+                    <!-- Categories will be populated here -->
+                </ul>
+            </div>
+
             <div class="chat-messages" id="chat-messages">
                 <div class="message bot-message">
-                    Hello! I'm LawGPT, your legal assistant. How can I assist you today?
+                    Hello! I'm LawGPT, your legal assistant. Select a legal category above and ask me a question.
                 </div>
             </div>
 
@@ -143,18 +169,12 @@
                 <form id="chat-form">
                     <div class="row g-3 align-items-center">
                         <div class="col-md-4">
-                            <label for="category" class="form-label">Legal Category</label>
-                            <select class="form-select" id="category" required>
-                                <option value="" selected disabled>Select category</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
                             <label for="language" class="form-label">Language</label>
                             <select class="form-select" id="language">
                                 <option value="English" selected>English</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-8">
                             <label for="user-input" class="form-label visually-hidden">Your Question</label>
                             <div class="input-group">
                                 <input type="text" class="form-control" id="user-input"
@@ -173,10 +193,11 @@
     <script>
         // JavaScript Code
         let sessionId = null;
+        let currentCategory = null;
         const messagesContainer = document.getElementById('chat-messages');
         const chatForm = document.getElementById('chat-form');
         const userInput = document.getElementById('user-input');
-        const categorySelect = document.getElementById('category');
+        const categoryTabs = document.getElementById('category-tabs');
         const languageSelect = document.getElementById('language');
 
         // --- Utility Functions ---
@@ -187,7 +208,7 @@
         function addMessage(text, sender, sources = null) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message', `${sender}-message`);
-            messageDiv.innerHTML = `<p>${text}</p>`; // Use innerHTML for safety
+            messageDiv.innerHTML = `<p>${text}</p>`;
 
             if (sources && sources.length > 0) {
                 const sourcesDiv = document.createElement('div');
@@ -202,6 +223,10 @@
 
         function displayError(message) {
             addMessage(`Error: ${message}`, 'bot');
+        }
+
+        function normalizeCategory(category) {
+            return category.toLowerCase().replace(/\s+/g, '-');
         }
 
         // --- API Interaction Functions ---
@@ -245,14 +270,31 @@
         }
 
         async function sendMessage(message, category, language) {
+            if (!category) {
+                displayError('Please select a legal category first.');
+                return;
+            }
+
             addMessage(message, 'user');
+            
             try {
-                const response = await fetch('/api/chat/', {
+                // Use category-specific endpoint
+                const normalizedCategory = normalizeCategory(category);
+                const endpoint = `/api/chat/category/${category}`;
+                
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: message, category, language, session_id: sessionId })
+                    body: JSON.stringify({ 
+                        query: message, 
+                        category: category, 
+                        language: language, 
+                        session_id: sessionId 
+                    })
                 });
+                
                 if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                
                 const data = await response.json();
                 addMessage(data.answer, 'bot', data.sources);
             } catch (error) {
@@ -261,17 +303,48 @@
             }
         }
 
+        function setActiveCategory(category) {
+            currentCategory = category;
+            
+            // Update active tab
+            document.querySelectorAll('#category-tabs .nav-link').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.getAttribute('data-category') === category) {
+                    tab.classList.add('active');
+                }
+            });
+            
+            // Add a message indicating category change
+            addMessage(`You are now in the "${category}" category. Please ask a relevant question.`, 'bot');
+        }
+
         // --- Initialization and Event Handling ---
         async function initialize() {
             sessionId = await createSession();
             if (!sessionId) return;
 
+            // Fetch and populate categories as tabs
             const categories = await fetchCategories();
             categories.forEach(category => {
-                const option = new Option(category, category);
-                categorySelect.add(option);
+                const li = document.createElement('li');
+                li.className = 'nav-item';
+                
+                const a = document.createElement('a');
+                a.className = 'nav-link';
+                a.href = '#';
+                a.textContent = category;
+                a.setAttribute('data-category', category);
+                
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    setActiveCategory(category);
+                });
+                
+                li.appendChild(a);
+                categoryTabs.appendChild(li);
             });
 
+            // Populate language dropdown
             const languages = await fetchLanguages();
             for (const [name, code] of Object.entries(languages)) {
                 const option = new Option(name, name);
@@ -282,14 +355,13 @@
         chatForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const message = userInput.value.trim();
-            const category = categorySelect.value;
 
             if (!sessionId) { displayError('No active session. Refresh the page.'); return; }
-            if (!category) { displayError('Select a legal category.'); return; }
+            if (!currentCategory) { displayError('Please select a legal category first.'); return; }
             if (!message) return;
 
             userInput.value = ''; // Clear input immediately
-            await sendMessage(message, category, languageSelect.value);
+            await sendMessage(message, currentCategory, languageSelect.value);
         });
 
         document.addEventListener('DOMContentLoaded', initialize);

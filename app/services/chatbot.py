@@ -11,7 +11,8 @@ def get_chat_response(
     language: str,
     retriever,
     llm,
-    memory: ConversationBufferWindowMemory
+    memory: ConversationBufferWindowMemory,
+    strict_category_check: bool = False
 ):
     """
     Process a user query and return a response using RAG architecture.
@@ -23,12 +24,22 @@ def get_chat_response(
         retriever: Vector store retriever
         llm: Language model
         memory: Conversation memory
+        strict_category_check: Whether to enforce strict category relevance
         
     Returns:
         Dictionary with answer and sources
     """
     # Add category context to the query
     enhanced_query = f"[Category: {category}] {query}"
+    
+    # If strict category check is enabled, first verify query relevance
+    if strict_category_check:
+        relevance_check = check_category_relevance(query, category, llm)
+        if not relevance_check["is_relevant"]:
+            return {
+                "answer": relevance_check["message"],
+                "sources": []
+            }
     
     # Setup QA chain
     qa = ConversationalRetrievalChain.from_llm(
@@ -67,3 +78,45 @@ def get_chat_response(
         "answer": final_response,
         "sources": sources
     }
+
+
+def check_category_relevance(query: str, category: str, llm):
+    """
+    Check if a query is relevant to the specified legal category.
+    
+    Args:
+        query: User's question
+        category: Legal category
+        llm: Language model
+        
+    Returns:
+        Dictionary with relevance check result
+    """
+    prompt = f"""
+    You are a legal expert responsible for routing questions to the appropriate department.
+    
+    Task:
+    Determine if the following question is directly related to the legal category: "{category}".
+    
+    Question: "{query}"
+    
+    Guidelines:
+    - Only respond with "YES" if the question is clearly and directly related to {category}.
+    - Otherwise respond with "NO".
+    - Do not provide any explanation or additional context.
+    - Respond with only a single word: "YES" or "NO".
+    """
+    
+    response = llm.invoke(prompt)
+    is_relevant = response.content.strip().upper() == "YES"
+    
+    if is_relevant:
+        return {
+            "is_relevant": True,
+            "message": ""
+        }
+    else:
+        return {
+            "is_relevant": False,
+            "message": f"I'm sorry, but your question doesn't appear to be related to the '{category}' category. Please ask a question specifically about {category} or select a different legal category."
+        }
