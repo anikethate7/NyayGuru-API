@@ -12,7 +12,25 @@ def embed_and_save_documents(data_dir="./LEGAL-DATA"):
     
     Args:
         data_dir: Directory containing PDF files
+    
+    Returns:
+        Number of chunks created
     """
+    # Check if directory exists
+    if not os.path.exists(data_dir):
+        print(f"Creating directory {data_dir}")
+        os.makedirs(data_dir, exist_ok=True)
+        print(f"No documents found in {data_dir}. Please add PDF files to this directory.")
+        return 0
+    
+    # Check if directory contains PDF files
+    pdf_files = [f for f in os.listdir(data_dir) if f.lower().endswith('.pdf')]
+    if not pdf_files:
+        print(f"No PDF files found in {data_dir}. Please add PDF files to this directory.")
+        return 0
+    
+    print(f"Found {len(pdf_files)} PDF files: {', '.join(pdf_files)}")
+    
     # Initialize embeddings
     embeddings = GoogleGenerativeAIEmbeddings(model=settings.EMBEDDING_MODEL)
     
@@ -22,6 +40,11 @@ def embed_and_save_documents(data_dir="./LEGAL-DATA"):
     docs = loader.load()
     print(f"Loaded {len(docs)} documents")
     
+    if not docs:
+        print(f"No content could be extracted from the PDF files in {data_dir}.")
+        print("Please ensure the PDF files are valid and contain text content.")
+        return 0
+    
     # Split documents
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=settings.CHUNK_SIZE, 
@@ -29,6 +52,10 @@ def embed_and_save_documents(data_dir="./LEGAL-DATA"):
     )
     final_documents = text_splitter.split_documents(docs)
     print(f"Split into {len(final_documents)} chunks")
+    
+    if not final_documents:
+        print("No document chunks were created. The PDFs might be empty or contain only images.")
+        return 0
     
     # Ensure metadata includes the source file name
     for doc in final_documents:
@@ -54,14 +81,17 @@ def embed_and_save_documents(data_dir="./LEGAL-DATA"):
         vector_store = FAISS.from_documents(batch, embeddings)
         vector_stores.append(vector_store)
     
-    # Merge vector stores
-    vectors = vector_stores[0]
-    for vector_store in vector_stores[1:]:
-        vectors.merge_from(vector_store)
-    print("Merged vector stores")
-    
-    # Save to disk
-    vectors.save_local(settings.VECTOR_STORE_PATH)
-    print(f"Saved vector store to {settings.VECTOR_STORE_PATH}")
+    # Merge vector stores only if there are any
+    if vector_stores:
+        vectors = vector_stores[0]
+        for vector_store in vector_stores[1:]:
+            vectors.merge_from(vector_store)
+        print("Merged vector stores")
+        
+        # Save to disk
+        vectors.save_local(settings.VECTOR_STORE_PATH)
+        print(f"Saved vector store to {settings.VECTOR_STORE_PATH}")
+    else:
+        print("No vector stores were created.")
     
     return len(final_documents)

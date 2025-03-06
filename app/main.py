@@ -1,6 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 import os
 
 from app.api.router import api_router
@@ -29,11 +31,21 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 # Include API router
 app.include_router(api_router, prefix="/api")
 
-@app.get("/", tags=["Root"])
+@app.get("/", response_class=HTMLResponse, tags=["Root"])
 async def root():
-    """Root endpoint to check if the API is running."""
-    return {"message": "Welcome to LawGPT API. Access documentation at /docs"}
+    """Serve the frontend HTML page."""
+    try:
+        with open("static/index.html", "r") as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content)
+    except FileNotFoundError:
+        return {"message": "Welcome to LawGPT API. Access documentation at /docs"}
+
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_redirect():
+    """Redirect to the Swagger UI."""
+    return RedirectResponse(url="/docs")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
