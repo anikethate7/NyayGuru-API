@@ -139,26 +139,66 @@ const ChatPage = () => {
   }
 
   if (error) {
-    return <div className="container mt-4 alert alert-danger">{error}</div>;
+    return <div className="error-container">{error}</div>;
   }
 
   return (
-    <div className="container mt-4">
-      <div className="chat-container">
-        <CategoryTabs
-          categories={categories}
-          activeCategory={currentCategory}
-          onCategoryChange={handleCategoryChange}
-        />
+    <div className="app-container">
+      <div className="sidebar">
+        <div className="sidebar-header">
+          <h3>Categories</h3>
+        </div>
+        <div className="sidebar-content">
+          <ul className="category-list">
+            {categories.map((category) => (
+              <li
+                key={category}
+                className={currentCategory === category ? "active" : ""}
+                onClick={() => handleCategoryChange(category)}
+              >
+                <i className="bi bi-bookmark-fill"></i>
+                <span>{category}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="sidebar-footer">
+          <div className="language-selector">
+            <label htmlFor="language-select">Language</label>
+            <select
+              id="language-select"
+              value={currentLanguage}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+            >
+              {Object.keys(languages).map((lang) => (
+                <option key={lang} value={lang}>
+                  {lang}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="chat-panel">
+        <div className="chat-header">
+          <h2>
+            <i className="bi bi-chat-square-text-fill"></i>
+            {currentCategory
+              ? `LawGPT - ${currentCategory}`
+              : "LawGPT Assistant"}
+          </h2>
+          {currentCategory && (
+            <span className="category-badge">{currentCategory}</span>
+          )}
+        </div>
 
         <ChatMessages messages={messages} messagesEndRef={messagesEndRef} />
 
         <ChatInput
           onSendMessage={handleSendMessage}
-          languages={languages}
-          currentLanguage={currentLanguage}
-          onLanguageChange={handleLanguageChange}
           disabled={!currentCategory || isProcessing}
+          isProcessing={isProcessing}
         />
       </div>
     </div>
