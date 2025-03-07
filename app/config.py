@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     
     # Embedding model settings
     EMBEDDING_MODEL: str = "models/embedding-001"
+
+    # Add this in your Settings class
+    VITE_API_URL: str = os.getenv("VITE_API_URL", "http://localhost:5000/api")
+
     
     # LLM settings
     LLM_MODEL: str = "llama3-70b-8192"
