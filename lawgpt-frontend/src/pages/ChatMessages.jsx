@@ -29,3 +29,5 @@ export const ChatMessages = ({ messages, messagesEndRef }) => {
     </div>
   );
 };
+
+export default ChatMessages;

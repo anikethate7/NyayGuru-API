@@ -1,4 +1,4 @@
-export const Header = () => {
+const Header = () => {
   return (
     <header className="chat-header">
       <h2>LawGPT - Legal Assistant</h2>
@@ -6,3 +6,5 @@ export const Header = () => {
     </header>
   );
 };
+
+export default Header;

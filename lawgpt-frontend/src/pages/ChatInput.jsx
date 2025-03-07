@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 export const ChatInput = ({
   onSendMessage,
   languages,
@@ -69,3 +71,5 @@ export const ChatInput = ({
     </div>
   );
 };
+
+export default ChatInput;
