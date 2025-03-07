@@ -12,7 +12,7 @@ from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.database import get_db, User
+from app.database import get_db, User as DBUser
 from app.models.schemas import TokenData
 
 # Set environment variables
@@ -63,7 +63,7 @@ def get_conversation_memory(session_id: str) -> ConversationBufferWindowMemory:
 async def get_current_user(
     db: Session = Depends(get_db),
     token: str = Depends(oauth2_scheme)
-) -> User:
+) -> DBUser:
     """Get current authenticated user from token."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -84,13 +84,13 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
     
-    user = db.query(User).filter(User.email == token_data.email).first()
+    user = db.query(DBUser).filter(DBUser.email == token_data.email).first()
     if user is None:
         raise credentials_exception
     
     return user
 
-def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
+def get_current_active_user(current_user: DBUser = Depends(get_current_user)) -> DBUser:
     """Get current active user."""
     if not current_user.is_active:
         raise HTTPException(
