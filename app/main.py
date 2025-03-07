@@ -1,8 +1,7 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import FileResponse
 import os
 
 from app.api.router import api_router
@@ -23,28 +22,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Ensure static directory exists before mounting
-static_dir = "static"
-os.makedirs(static_dir, exist_ok=True)
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
 # Include API router
 app.include_router(api_router, prefix="/api")
 
-@app.get("/", response_class=HTMLResponse, tags=["Root"])
-async def root():
-    """Serve the frontend HTML page."""
-    try:
-        with open("static/index.html", "r") as f:
-            html_content = f.read()
-        return HTMLResponse(content=html_content)
-    except FileNotFoundError:
-        return {"message": "Welcome to LawGPT API. Access documentation at /docs"}
+# Define path to the React app build directory
+REACT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "lawgpt-frontend/dist")
 
-@app.get("/docs", include_in_schema=False)
-async def custom_swagger_ui_redirect():
-    """Redirect to the Swagger UI."""
-    return RedirectResponse(url="/docs")
+# Mount the static files from the React app
+if os.path.exists(REACT_DIR):
+    app.mount("/assets", StaticFiles(directory=os.path.join(REACT_DIR, "assets")), name="assets")
+
+@app.get("/{full_path:path}")
+async def serve_react_app(full_path: str):
+    """Serve the React app for any path not matched by other routes."""
+    if full_path.startswith("api/"):
+        # This shouldn't happen since the API router is included first
+        raise HTTPException(status_code=404, detail="API route not found")
+    
+    # For all other paths, serve the React app's index.html
+    index_path = os.path.join(REACT_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    
+    return {"message": "React frontend not found. Make sure to build it first."}
 
 if __name__ == "__main__":
     import uvicorn
