@@ -1,5 +1,4 @@
 import os
-import secrets
 from typing import List
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
@@ -26,10 +25,6 @@ class Settings(BaseSettings):
     
     # Embedding model settings
     EMBEDDING_MODEL: str = "models/embedding-001"
-
-    # Add this in your Settings class
-    VITE_API_URL: str = os.getenv("VITE_API_URL", "http://localhost:5000/api")
-
     
     # LLM settings
     LLM_MODEL: str = "llama3-70b-8192"
@@ -59,15 +54,7 @@ class Settings(BaseSettings):
     
     # Retrieval settings
     RETRIEVAL_K: int = 4
-    
-    # Authentication settings
-    SECRET_KEY: str = os.getenv("SECRET_KEY", secrets.token_urlsafe(32))
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
-    
-    # Database settings
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./lawgpt.db")
-    
+
     class Config:
         env_file = ".env"
         case_sensitive = True

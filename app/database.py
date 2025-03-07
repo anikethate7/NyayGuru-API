@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Generator
 from sqlalchemy import create_engine, Column, String, Boolean, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
@@ -34,7 +35,7 @@ class User(Base):
 Base.metadata.create_all(bind=engine)
 
 # Dependency
-def get_db() -> Session:
+def get_db() -> Generator[Session, None, None]:
     """Get database session."""
     db = SessionLocal()
     try:

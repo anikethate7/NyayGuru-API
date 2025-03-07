@@ -1,5 +1,5 @@
 from typing import List, Dict, Optional, Any
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field
 
 
 class Message(BaseModel):
@@ -37,36 +37,3 @@ class HealthResponse(BaseModel):
     """Health check response."""
     status: str = Field("ok", description="API status")
     version: str = Field(..., description="API version")
-
-
-# Authentication schemas
-class Token(BaseModel):
-    """Token response model."""
-    access_token: str
-    token_type: str = "bearer"
-
-
-class TokenData(BaseModel):
-    """Token data model."""
-    email: Optional[str] = None
-
-
-class UserResponse(BaseModel):
-    """User response model."""
-    id: str
-    email: EmailStr
-    full_name: Optional[str] = None
-    is_active: bool = True
-
-
-class SignupResponse(BaseModel):
-    """Signup response model."""
-    message: str = "User registered successfully"
-    user: UserResponse
-
-
-class LoginResponse(BaseModel):
-    """Login response model."""
-    access_token: str
-    token_type: str = "bearer"
-    user: UserResponse

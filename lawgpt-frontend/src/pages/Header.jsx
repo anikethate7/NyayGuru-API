@@ -1,9 +1,4 @@
-import { Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-
 const Header = () => {
-  const { currentUser } = useAuth();
-
   return (
     <header className="app-header">
       <div className="header-content">
@@ -14,15 +9,6 @@ const Header = () => {
         <p className="tagline">
           Your AI-powered legal assistant, ready to help!
         </p>
-
-        {currentUser && (
-          <Link to="/profile" className="user-profile">
-            <div className="user-avatar">
-              <i className="bi bi-person"></i>
-            </div>
-            <span>{currentUser.firstName}</span>
-          </Link>
-        )}
       </div>
     </header>
   );
