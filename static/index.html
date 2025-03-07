@@ -35,7 +35,8 @@
             background-color: #fff;
             border-radius: 12px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
-            overflow: hidden; /* Ensure rounded corners are respected */
+            overflow: hidden;
+            /* Ensure rounded corners are respected */
         }
 
         .chat-header {
@@ -60,7 +61,8 @@
             padding: 12px 20px;
             margin-bottom: 10px;
             max-width: 80%;
-            word-break: break-word; /* Prevent long words from overflowing */
+            word-break: break-word;
+            /* Prevent long words from overflowing */
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.07);
             font-size: 0.95rem;
         }
@@ -142,6 +144,36 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #bbb;
         }
+
+        /* Loader Styling */
+        .loader {
+            border: 5px solid #f3f3f3;
+            /* Light grey */
+            border-top: 5px solid var(--primary-color);
+            /* Blue */
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+            /* Center the loader */
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-message {
+            text-align: center;
+            font-style: italic;
+            color: var(--light-text-color);
+        }
     </style>
 </head>
 
@@ -152,7 +184,6 @@
                 <h2>LawGPT - Legal Assistant</h2>
                 <p>Your AI-powered legal assistant, ready to help!</p>
             </div>
-
             <div class="category-tabs">
                 <ul class="nav nav-tabs" id="category-tabs">
                     <!-- Categories will be populated here -->
@@ -205,20 +236,30 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        function addMessage(text, sender, sources = null) {
+        function addMessage(text, sender, sources = null, isLoading = false) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message', `${sender}-message`);
-            messageDiv.innerHTML = `<p>${text}</p>`;
 
-            if (sources && sources.length > 0) {
-                const sourcesDiv = document.createElement('div');
-                sourcesDiv.classList.add('sources');
-                sourcesDiv.textContent = 'Sources: ' + sources.join(', ');
-                messageDiv.appendChild(sourcesDiv);
+            if (isLoading) {
+                messageDiv.innerHTML = `
+                <div class="loader"></div>
+                <p class="loading-message">Generating response...</p>
+            `;
+            } else {
+                messageDiv.innerHTML = `<p>${text}</p>`;
+
+                if (sources && sources.length > 0) {
+                    const sourcesDiv = document.createElement('div');
+                    sourcesDiv.classList.add('sources');
+                    sourcesDiv.textContent = 'Sources: ' + sources.join(', ');
+                    messageDiv.appendChild(sourcesDiv);
+                }
             }
+
 
             messagesContainer.appendChild(messageDiv);
             scrollToBottom();
+            return messageDiv; // Return the message div
         }
 
         function displayError(message) {
@@ -232,7 +273,9 @@
         // --- API Interaction Functions ---
         async function createSession() {
             try {
-                const response = await fetch('/api/chat/session', { method: 'POST' });
+                const response = await fetch('/api/chat/session', {
+                    method: 'POST'
+                });
                 if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
                 const data = await response.json();
                 return data.session_id;
@@ -276,36 +319,47 @@
             }
 
             addMessage(message, 'user');
-            
+
+            // Add loading indicator
+            const loadingMessageDiv = addMessage('', 'bot', null, true);
+
             try {
                 // Use category-specific endpoint
                 const normalizedCategory = normalizeCategory(category);
                 const endpoint = `/api/chat/category/${category}`;
-                
+
                 const response = await fetch(endpoint, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        query: message, 
-                        category: category, 
-                        language: language, 
-                        session_id: sessionId 
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        query: message,
+                        category: category,
+                        language: language,
+                        session_id: sessionId
                     })
                 });
-                
+
                 if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                
+
                 const data = await response.json();
+
+                // Replace loading indicator with the actual message
+                loadingMessageDiv.remove();
                 addMessage(data.answer, 'bot', data.sources);
+
+
             } catch (error) {
                 console.error('Message sending failed:', error);
+                loadingMessageDiv.remove(); // Remove loading indicator on error
                 displayError('Failed to send your message. Please try again.');
             }
         }
 
         function setActiveCategory(category) {
             currentCategory = category;
-            
+
             // Update active tab
             document.querySelectorAll('#category-tabs .nav-link').forEach(tab => {
                 tab.classList.remove('active');
@@ -313,7 +367,7 @@
                     tab.classList.add('active');
                 }
             });
-            
+
             // Add a message indicating category change
             addMessage(`You are now in the "${category}" category. Please ask a relevant question.`, 'bot');
         }
@@ -328,18 +382,18 @@
             categories.forEach(category => {
                 const li = document.createElement('li');
                 li.className = 'nav-item';
-                
+
                 const a = document.createElement('a');
                 a.className = 'nav-link';
                 a.href = '#';
                 a.textContent = category;
                 a.setAttribute('data-category', category);
-                
+
                 a.addEventListener('click', (e) => {
                     e.preventDefault();
                     setActiveCategory(category);
                 });
-                
+
                 li.appendChild(a);
                 categoryTabs.appendChild(li);
             });
@@ -356,8 +410,14 @@
             e.preventDefault();
             const message = userInput.value.trim();
 
-            if (!sessionId) { displayError('No active session. Refresh the page.'); return; }
-            if (!currentCategory) { displayError('Please select a legal category first.'); return; }
+            if (!sessionId) {
+                displayError('No active session. Refresh the page.');
+                return;
+            }
+            if (!currentCategory) {
+                displayError('Please select a legal category first.');
+                return;
+            }
             if (!message) return;
 
             userInput.value = ''; // Clear input immediately
