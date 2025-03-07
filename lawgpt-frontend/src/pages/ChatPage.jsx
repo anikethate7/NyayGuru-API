@@ -23,8 +23,13 @@ const ChatPage = () => {
   const [currentCategory, setCurrentCategory] = useState(null);
   const [currentLanguage, setCurrentLanguage] = useState("English");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false); // New state
 
   const messagesEndRef = useRef(null);
+
+  const toggleSidebar = () => {
+    setSidebarExpanded(!sidebarExpanded);
+  };
 
   // Handle URL category parameter
   useEffect(() => {
@@ -144,8 +149,8 @@ const ChatPage = () => {
 
   return (
     <div className="app-container">
-      <div className="sidebar">
-        <div className="sidebar-header">
+      <div className={`sidebar ${sidebarExpanded ? "expanded" : ""}`}>
+        <div className="sidebar-header" onClick={toggleSidebar}>
           <h3>Categories</h3>
         </div>
         <div className="sidebar-content">
