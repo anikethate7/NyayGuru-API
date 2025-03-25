@@ -33,11 +33,13 @@ class Settings(BaseSettings):
     ENABLE_TRANSLATION: bool = True
     
     # Supported languages
+# Supported languages
     SUPPORTED_LANGUAGES: dict = {
         "English": "en",
         "Hindi": "hi",
-        "Marathi": "mr",
+        "Marathi": "mr"
     }
+
     
     # Legal categories
     LEGAL_CATEGORIES: List[str] = [

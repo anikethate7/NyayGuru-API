@@ -4,6 +4,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
 /* Custom Variables */
+*{
+  overflow-y: hidden;
+}
 :root {
   --primary-color: #4a6cf7;
   --primary-light: #e0e7ff;
